@@ -21,9 +21,10 @@ Tinf = 100;  % Freestream temperature
 resolution_x = 10; 
 resolution_y = 10; 
 
-t = 0; % Initial time
+t = 0; % Initial timea
+tfinal = 0.5; % set tfinal to 0 if you want a steady state solution!
 
-%% Creating the grid
+%% Creating the grid and initializing values
 
 T = ones(resolution_x, resolution_y) * To; % creating grid where everything = To
 dx = l / (resolution_x - 1); % square grid so in this case, dx == dy 
@@ -34,3 +35,14 @@ dy = l / (resolution_y - 1);
 Fo = 1/2; 
 dt = Fo * dx^2 / alpha; % dt depending on our chosen value for Fo
 
+%% Explicit Time Scheme!
+
+Tnew = zeros(size(T)); 
+
+if scheme == 0
+    while true
+        break
+
+    end
+
+end
