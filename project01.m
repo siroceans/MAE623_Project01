@@ -34,6 +34,7 @@ dy = l / (resolution_y - 1);
 % I will choose Fo = 1/2 to guarantee stability!
 Fo = 1/2; 
 dt = Fo * dx^2 / alpha; % dt depending on our chosen value for Fo
+Bi = h * dx / k; 
 
 %% Explicit Time Scheme!
 
@@ -41,8 +42,31 @@ Tnew = zeros(size(T));
 
 if scheme == 0
     while true
+        % Calculating T at each interior node
+        for m = 2:(resolution_x - 1) % Going through each row
+            for n = 2:(resolution_y - 1) % and every column...
+                Tnew(m,n) = Fo * (T(m+1, n) + T(m-1,n) + T(m,n+1) + T(m, n-1)) + (1 - 4 * Fo) * T(m, n); 
+%                fprintf('m is %d, n is %d \n', m, n)
+            end
+        end
+
+        % Applying boundary conditions (origin in matlab is top left!!)
+        Tnew(:,1) = Tw; % west bc
+        Tnew(1, :) = Tn; % north bc
+
+        % Insulated BC (T_south)
+        for n = 2:(resolution_y -1)
+            m = 10; 
+            Tnew(m, n) = Fo * (2 * T(m-1, n) + T(m, n+1) + T(m, n-1)) + (1 - 4 * Fo) * T(m, n); 
+        end
+
+        % Convective BC (T_east)
+        for m = 2:(resolution_x )
+            n = 10; 
+            Tnew(m, n) = (Bi * Tinf + Tnew(m, n-1)) / (1 * Bi); 
+        end
+
+        disp(Tnew)
         break
-
     end
-
 end
