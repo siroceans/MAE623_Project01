@@ -7,7 +7,7 @@ clc
 close all
 
 %% Input parameters
-scheme = 0; % Zero == Explicit; One == Implicit!!
+scheme = 1; % Zero == Explicit; One == Implicit!!
 
 alpha = 1; 
 l = 1; 
@@ -30,9 +30,6 @@ tol = 0.0001; % tolerance for steady state solution!
 
 %% Creating the grid and initializing values
 
-T = ones(resolution_x, resolution_y) * To; % creating grid where everything = To
-Tnew = zeros(size(T)); 
-
 dx = l / (resolution_x - 1); % square grid so in this case, dx == dy 
 dy = l / (resolution_y - 1); 
 
@@ -43,6 +40,8 @@ Bi = h * dx / k;
 %% Explicit Time Scheme!
 
 if scheme == 0
+    T = ones(resolution_x, resolution_y) * To; % creating grid where everything = To
+    Tnew = zeros(size(T)); 
     while true
         % Calculating T at each interior node
         for m = 2:(resolution_x - 1) % Going through each row
@@ -78,14 +77,59 @@ if scheme == 0
         t = t + dt; % update time
         T = Tnew;   % update T matrix for next iteration
     end
+    plotFDResults(T, l, resolution_x, resolution_y, tfinal)
 end
-
-%disp(T)
-plotFDResults(T, l, resolution_x, resolution_y, tfinal)
 
 %% Implicit Time Scheme!
 
 if scheme == 1
+    % Creating column matrices 
+    T = ones(resolution_x * resolution_y, 1) * To; % column matrix for initial T
+    Tnew = zeros(resolution_x * resolution_y, 1); % column matrix for T!
+    N = resolution_x * resolution_y; 
+
+    % Creating matrix A
+    dp = 1 + 4 * Fo; % Point coefficient values
+    dn = - Fo; % Neighbor coefficient valuesa
+    
+    % Array of Diagonal Values
+    diagonalArray = zeros(N, 5);
+    diagonalArray(:, 1) = dn; 
+    diagonalArray(:, 2) = dn;
+    diagonalArray(:, 3) = dp; 
+    diagonalArray(:, 4) = dn; 
+    diagonalArray(:, 5) = dn;
+
+    diagonalPositions = [-resolution_y, -1, 0, 1, resolution_y]; % Locations of the diagonals!
+    A = spdiags(diagonalArray, diagonalPositions, N, N); % Creating the sparce matrix
+
+    % Modifying rows for boundary conditions!
+    left = 1 : resolution_y; 
+    right = resolution_y^2 - resolution_y  + 1: resolution_y^2; 
+    bottom = (0:resolution_x - 1) * resolution_x + 1;  
+    top = (1: resolution_x) * resolution_x; 
+
+    for p = 1:length(T)
+        if ismember(p, left)
+            % left BC
+            A(p, :) = 0;
+            A(p, p) = 1; 
+        elseif ismember(p, top)
+            % top BC
+            A(p, :) = 0;
+            A(p, p) = Tn; 
+        elseif ismember(p, right)
+            % right BC
+            A(p, :) = 0;
+            A(p, p) = (1 + Bi); 
+            A(p, p - resolution_y) = -1; 
+        elseif ismember(p, bottom)
+            % bottom BC
+            A(p, :) = 0;
+            A(p, p) = -1; 
+            A(p,p + 1) = 1; 
+        end
+    end
 end
 
 %% Plotting function
@@ -128,4 +172,4 @@ function plotFDResults(T, L, nx, ny, tfinal)
     else
         legend(['Solution at t = ', num2str(tfinal)])
     end
-end
+    end
