@@ -19,11 +19,11 @@ Tw = 0;  % West boundary - constant T bc
 Tn = 0;  % North boundary - constant T bc
 Tinf = 100;  % Freestream temperature
 
-resolution_x = 10; 
-resolution_y = 10; 
+resolution_x = 40; 
+resolution_y = 40;
 
 tfinal = 0.5; % set tfinal to 0 if you want a steady state solution!
-Fo = 1/6; % make it small to guarantee stability!
+Fo = 1; % make it small to guarantee stability!
 
 t = 0; % Initial time
 tol = 0.0001; % tolerance for steady state solution!
@@ -56,12 +56,12 @@ if scheme == 0
 
         for n = 2:(resolution_y -1) % Insulated BC (T_south)
 
-            m = 10; 
+            m = resolution_x; 
             Tnew(m, n) = Tnew(m-1, n); %T2 = T1
         end
 
         for m = 2:(resolution_x ) % Convective BC (T_east)
-            n = 10; 
+            n = resolution_y; 
             Tnew(m, n) = (Bi * Tinf + Tnew(m, n-1)) / (1 + Bi); 
         end
 
@@ -74,7 +74,7 @@ if scheme == 0
             break
         end
 
-        t = t + dt; % update time
+        t = t + dt % update time
         T = Tnew;   % update T matrix for next iteration
     end
     plotFDResults(T, l, resolution_x, resolution_y, tfinal)
@@ -91,7 +91,7 @@ if scheme == 1
     % Creating matrix A
     dp = 1 + 4 * Fo; % Point coefficient values
     dn = - Fo; % Neighbor coefficient valuesa
-    
+
     % Array of Diagonal Values
     diagonalArray = zeros(N, 5);
     diagonalArray(:, 1) = dn; 
@@ -117,7 +117,7 @@ if scheme == 1
         elseif ismember(p, top)
             % top BC
             A(p, :) = 0;
-            A(p, p) = Tn; 
+            A(p, p) = 1; 
         elseif ismember(p, right)
             % right BC
             A(p, :) = 0;
@@ -130,16 +130,52 @@ if scheme == 1
             A(p,p + 1) = 1; 
         end
     end
+
+    while true % time marching loop
+        % Creating C vector
+        C = T; 
+        for p = 1:length(C) % Applying BC's
+            if ismember(p, left)
+                C(p) = Tw; 
+            elseif ismember(p, top)
+                C(p) = Tn; 
+            elseif ismember(p, right)
+                C(p) = Bi * Tinf; 
+            elseif ismember(p, bottom)
+                C(p) = 0; 
+            end
+        end
+
+        Tnew = A \ C; % Solving equation for Tnew
+
+        % Conditional to end the loop
+        if tfinal == 0 % looking for steady state sol'n
+            if max(abs(Tnew - T)) < tol
+                break 
+            end 
+        elseif t >= tfinal  % Reached ending t value
+            break 
+        end
+
+        t = t + dt 
+        T = Tnew; % Updating T vector for new iteration
+    end
+    T = reshape(T, [resolution_x, resolution_y]); 
+    T = flipud(T); 
+    plotFDResults(T, l, resolution_x, resolution_y, tfinal)
 end
 
 %% Plotting function
 function plotFDResults(T, L, nx, ny, tfinal)
+    % Flipping Matrix!
+    T = flipud(T); 
+
     % Plotting in 3D
     x = linspace(0, L, nx); 
     y = linspace(0, L, ny); 
     [X,Y] = meshgrid(x, y); 
     figure()
-    surf(X, Y, flipud(T))
+    surf(X, Y, T)
     title('2D Heat Conduction Equation.')
     xlabel('x direction')
     ylabel('y direction')
