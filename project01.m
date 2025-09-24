@@ -7,7 +7,7 @@ clc
 close all
 
 %% Input parameters
-scheme = 1; % Zero == Explicit; One == Implicit!!
+scheme = 0; % Zero == Explicit; One == Implicit!!
 
 alpha = 1; 
 l = 1; 
@@ -19,27 +19,114 @@ Tw = 0;  % West boundary - constant T bc
 Tn = 0;  % North boundary - constant T bc
 Tinf = 100;  % Freestream temperature
 
-resolution_x = 40; 
-resolution_y = 40;
+resolution_x = 10; 
+resolution_y = 10;
 
-tfinal = 0.5; % set tfinal to 0 if you want a steady state solution!
-Fo = 1; % make it small to guarantee stability!
+tfinal = 0; % set tfinal to 0 if you want a steady state solution!
+Fo = 1/6; % make it small to guarantee stability!
 
-t = 0; % Initial time
 tol = 0.0001; % tolerance for steady state solution!
 
-%% Creating the grid and initializing values
 
-dx = l / (resolution_x - 1); % square grid so in this case, dx == dy 
-dy = l / (resolution_y - 1); 
+%% Functioning work
+% Uncomment this section if you want to modify the code using the input parameters for resolution x and resolution y
+% returns the T matrix of the solution
 
-% According to the handout Fo < 1/4 in 2D case
-dt = Fo * dx^2 / alpha; % dt depending on our chosen value for Fo
-Bi = h * dx / k; 
+%explicitFD(To, resolution_x, resolution_y, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k)
+%implicitFD(To, resolution_x, resolution_y, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k) 
 
-%% Explicit Time Scheme!
+%% Plotting Results for Report
 
-if scheme == 0
+T10E = explicitFD(To, 10, 10, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k); 
+T20E = explicitFD(To, 20, 20, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k); 
+T40E = explicitFD(To, 40, 40, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k); 
+
+
+
+T10I = implicitFD(To, 10, 10, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k);
+T20I = implicitFD(To, 20, 20, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k);
+T40I = implicitFD(To, 40, 40, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k);
+
+% Plotting Explicit y
+y1 = 0:(l/9):l; 
+T1 = T10E(:, 5); 
+y2 = 0:(l/19):l; 
+T2 = T20E(:,10); 
+y3 = 0:(l/39):l;
+T3 = T40E(:, 20); 
+figure() 
+plot(y1,T1, y2,T2, y3,T3)
+ylabel('T values')
+xlabel('y values')
+legend('10x10 grid', '20x20 grid', '40x40 grid', 'Location', 'Best')
+if tfinal > 0
+    title('T vs. y for x = 0.5 at t = 0.05 (Explicit)')
+else 
+    title('T vs. y for x = 0.5 at steady state (Explicit)')
+end
+
+% Plotting Explicit x
+x1 = y1; 
+x2 = y2; 
+x3 = y3; 
+T1 = T10E(5, :); 
+T2 = T20E(10, :); 
+T3 = T40E(20, :); 
+figure()
+plot(x1, T1, x2, T2, x3, T3)
+xlabel('x values')
+ylabel('T values')
+legend('10x10 grid', '20x20 grid', '40x40 grid', 'Location', 'Best')
+if tfinal > 0
+    title('T vs. x for y = 0.5 at t = 0.05 (Explicit)')
+else 
+    title('T vs. x for y = 0.5 at steady state (Explicit)')
+end
+
+% Plotting Implicit y
+T1 = T10I(:, 5); 
+T2 = T20I(:, 10); 
+T3 = T40I(:, 20);
+figure()
+plot(y1,T1, y2,T2, y3,T3)
+ylabel('T values')
+xlabel('y values')
+legend('10x10 grid', '20x20 grid', '40x40 grid', 'Location', 'Best')
+if tfinal > 0
+    title('T vs. y for x = 0.5 at t = 0.05 (Implicit)')
+else 
+    title('T vs. y for x = 0.5 at steady state (Implicit)')
+end
+
+% Plotting Implicit x
+T1 = T10I(5, :); 
+T2 = T20I(10, :); 
+T3 = T40I(20, :); 
+figure()
+plot(x1, T1, x2, T2, x3, T3)
+xlabel('x values')
+ylabel('T values')
+legend('10x10 grid', '20x20 grid', '40x40 grid', 'Location', 'Best')
+if tfinal > 0
+    title('T vs. x for y = 0.5 at t = 0.05 (Implicit)')
+else 
+    title('T vs. x for y = 0.5 at steady state (Implicit)')
+end
+
+
+
+%% Explicit Time Scheme Function!
+
+function T = explicitFD(To, resolution_x, resolution_y, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k)
+
+    % Creating Grid and Initializing Values
+    dx = l / (resolution_x - 1); % square grid so in this case, dx == dy 
+
+    % According to the handout Fo < 1/4 in 2D case
+    dt = Fo * dx^2 / alpha; % dt depending on our chosen value for Fo
+    Bi = h * dx / k; 
+
+    t = 0; % Initial time;
     T = ones(resolution_x, resolution_y) * To; % creating grid where everything = To
     Tnew = zeros(size(T)); 
     while true
@@ -74,15 +161,25 @@ if scheme == 0
             break
         end
 
-        t = t + dt % update time
-        T = Tnew;   % update T matrix for next iteration
+        t = t + dt; % update time
+        T = Tnew;  % update T matrix for next iteration
     end
-    plotFDResults(T, l, resolution_x, resolution_y, tfinal)
+    %disp(t)
+%    plotFDResults(T, l, resolution_x, resolution_y, tfinal)
 end
 
-%% Implicit Time Scheme!
+%% Implicit Time Scheme Function!
 
-if scheme == 1
+function T = implicitFD(To, resolution_x, resolution_y, Fo, tfinal, Tw, Tn, Tinf, tol, l, alpha, h, k)
+
+    % Creating Grid and Initializing Values
+    dx = l / (resolution_x - 1); % square grid so in this case, dx == dy 
+
+    % According to the handout Fo < 1/4 in 2D case
+    dt = Fo * dx^2 / alpha; % dt depending on our chosen value for Fo
+    Bi = h * dx / k; 
+
+    t = 0; % Initial time
     % Creating column matrices 
     T = ones(resolution_x * resolution_y, 1) * To; % column matrix for initial T
     Tnew = zeros(resolution_x * resolution_y, 1); % column matrix for T!
@@ -157,12 +254,13 @@ if scheme == 1
             break 
         end
 
-        t = t + dt 
+        t = t + dt; 
         T = Tnew; % Updating T vector for new iteration
     end
     T = reshape(T, [resolution_x, resolution_y]); 
     T = flipud(T); 
-    plotFDResults(T, l, resolution_x, resolution_y, tfinal)
+%    plotFDResults(T, l, resolution_x, resolution_y, tfinal)
+    %disp(t)
 end
 
 %% Plotting function
@@ -208,4 +306,4 @@ function plotFDResults(T, L, nx, ny, tfinal)
     else
         legend(['Solution at t = ', num2str(tfinal)])
     end
-    end
+end
